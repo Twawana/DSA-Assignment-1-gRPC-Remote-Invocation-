@@ -1,0 +1,136 @@
+syntax = "proto3";
+
+package rental;
+
+// =====================================================================
+// RENTAL ACCOMMODATION SYSTEM — gRPC contract
+// Ministry of Tourism — Q2, DSA612S Assignment 1
+// =====================================================================
+
+service RentalService {
+
+    // Simple RPC — Host registers a new listing, server returns a
+    // generated property_id inside the returned Property.
+    rpc AddProperty (PropertyRequest) returns (PropertyResponse);
+
+    // Client-side streaming — multiple Host/Guest profiles are streamed
+    // to the server; server replies once, after the stream closes.
+    rpc CreateUsers (stream UserRequest) returns (CreateUsersResponse);
+
+    // Simple RPC — Host updates price/status using property_id as key.
+    rpc UpdateProperty (UpdatePropertyRequest) returns (PropertyResponse);
+
+    // Simple RPC — Host deletes a listing; server returns the Host's
+    // remaining properties in that region.
+    rpc RemoveProperty (RemovePropertyRequest) returns (PropertyListResponse);
+
+    // Server-side streaming — Guest requests available properties,
+    // optionally filtered by location/price; server streams them back.
+    rpc ListAvailableProperties (ListPropertiesRequest) returns (stream PropertyResponse);
+
+    // Simple RPC — Guest looks up one property by id.
+    rpc SearchProperty (SearchPropertyRequest) returns (PropertyResponse);
+
+    // Simple RPC — Guest requests to book a property for given dates;
+    // server validates dates and places the request in a "booking cart".
+    rpc BookProperty (BookingRequest) returns (BookingResponse);
+
+    // Simple RPC — Finalises a pending booking: checks for date overlaps,
+    // calculates total cost, returns a confirmation.
+    rpc ConfirmBooking (ConfirmBookingRequest) returns (BookingConfirmation);
+}
+
+// ------------------------- Property messages -------------------------
+
+message Property {
+    string property_id      = 1;
+    string host_id          = 2;
+    string name             = 3;
+    string location         = 4;
+    string property_type    = 5;
+    double price_per_night  = 6;
+    string status           = 7; // AVAILABLE, BOOKED, UNAVAILABLE
+}
+
+message PropertyRequest {
+    string host_id          = 1;
+    string name             = 2;
+    string location         = 3;
+    string property_type    = 4;
+    double price_per_night  = 5;
+    string status           = 6;
+}
+
+message PropertyResponse {
+    bool success       = 1;
+    string message     = 2;
+    Property property  = 3;
+}
+
+message UpdatePropertyRequest {
+    string property_id      = 1;
+    double price_per_night  = 2;
+    string status           = 3;
+}
+
+message RemovePropertyRequest {
+    string property_id  = 1;
+    string host_id       = 2;
+}
+
+message PropertyListResponse {
+    bool success                  = 1;
+    string message                = 2;
+    repeated Property properties  = 3;
+}
+
+message ListPropertiesRequest {
+    string location    = 1; // empty string = no location filter
+    double max_price   = 2; // 0 = no price ceiling
+}
+
+message SearchPropertyRequest {
+    string property_id = 1;
+}
+
+// -------------------------- Booking messages --------------------------
+
+message BookingRequest {
+    string guest_id     = 1;
+    string property_id  = 2;
+    string check_in     = 3; // "YYYY-MM-DD"
+    string check_out    = 4; // "YYYY-MM-DD"
+}
+
+message BookingResponse {
+    bool success        = 1;
+    string message      = 2;
+    string booking_ref  = 3;
+}
+
+message ConfirmBookingRequest {
+    string booking_ref = 1;
+}
+
+message BookingConfirmation {
+    bool success        = 1;
+    string message      = 2;
+    string booking_ref  = 3;
+    double total_cost   = 4;
+    int32 nights        = 5;
+}
+
+// --------------------------- User messages -----------------------------
+
+message UserRequest {
+    string user_id  = 1;
+    string name     = 2;
+    string role     = 3; // HOST or GUEST
+    string email    = 4;
+}
+
+message CreateUsersResponse {
+    bool success    = 1;
+    int32 count     = 2;
+    string message  = 3;
+}

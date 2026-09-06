@@ -1,0 +1,4 @@
+[package]
+org = "rental_accommodation"
+name = "client"
+version = "0.1.0"

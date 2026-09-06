@@ -1,0 +1,130 @@
+# Rental Accommodation System — Q2 gRPC Scaffold
+
+This is starter architecture for **Question 2** of DSA612S Assignment 1
+(Ministry of Tourism rental platform). The `.proto` contract and data
+layer are complete; the business logic is left as TODOs for your group
+to implement, and the gRPC wiring (which depends on generated code)
+is explained step by step below.
+
+## Project layout
+
+```
+rental-accommodation-system/
+├── proto/
+│   └── rental.proto          # Complete — the service contract
+├── server/
+│   ├── Ballerina.toml
+│   ├── store.bal              # Complete — in-memory maps + types
+│   ├── property_service.bal   # TODO — add/update/remove/list/search
+│   ├── booking_service.bal    # TODO — book/confirm (validation, overlap, price)
+│   └── users_service.bal      # TODO — registerUser for create_users
+└── client/
+    ├── Ballerina.toml
+    └── client.bal              # One worked example + TODOs for the rest
+```
+
+## Step 1 — Install prerequisites
+
+You need Ballerina Swan Lake (2201.x or later) with the gRPC tool.
+Check with:
+
+```bash
+bal version
+bal grpc --help
+```
+
+If `bal grpc` isn't found, install the gRPC tool:
+
+```bash
+bal tool pull grpc
+```
+
+## Step 2 — Generate the gRPC stubs
+
+Run the generator against the shared contract, once per project
+(server and client each need their own copy of the generated code):
+
+```bash
+cd server
+bal grpc --input ../proto/rental.proto --output modules/rental_pb
+
+cd ../client
+bal grpc --input ../proto/rental.proto --output modules/rental_pb
+```
+
+This produces a module containing:
+- Record types for every message in `rental.proto` (`Property`,
+  `PropertyRequest`, `BookingConfirmation`, etc.)
+- A ready-made **service template** (in `server/`) with one empty
+  `remote function` per RPC, correct signatures already filled in
+- A ready-made **client object** (in `client/`), conventionally named
+  `RentalServiceClient`, with one method per RPC that already does the
+  network call for you
+
+Open the generated files and confirm the exact names — minor
+naming can vary slightly by Ballerina version, and the rest of this
+README assumes the conventional names above.
+
+## Step 3 — Wire the generated service to your business logic
+
+Inside the generated service template, each empty `remote function`
+should call the matching function you write in `property_service.bal`
+/ `booking_service.bal` / `users_service.bal`, then shape the result
+into the expected response record. Worked example for `add_property`:
+
+```ballerina
+remote function addProperty(PropertyRequest req) returns PropertyResponse|error {
+    PropertyRecord|error result = addProperty(req.hostId, req.name, req.location,
+            req.propertyType, req.pricePerNight, req.status);
+    if result is error {
+        return { success: false, message: result.message(), property: {} };
+    }
+    return { success: true, message: "Property added", property: result };
+}
+```
+
+Repeat this pattern for the other six RPCs (`update_property`,
+`remove_property`, `list_available_properties`, `search_property`,
+`book_property`, `confirm_booking`). For `create_users` (client
+streaming), call `registerUser(...)` once per incoming `UserRequest`,
+counting successes, then return a single `CreateUsersResponse` once
+the stream ends.
+
+## Step 4 — Implement the client
+
+`client/client.bal` has `add_property` fully worked as a pattern —
+follow it for the remaining seven calls (TODOs are marked inline).
+
+## Step 5 — Run it
+
+```bash
+# terminal 1
+cd server && bal run .
+
+# terminal 2
+cd client && bal run .
+```
+
+## TODO checklist (mapped to the mark scheme)
+
+- [ ] **Protocol Buffer Definition (15 marks)** — review `rental.proto`,
+      adjust fields if your group wants extra data, regenerate stubs
+- [ ] **gRPC Server Implementation (25 marks)**
+  - [ ] `property_service.bal` — add/update/remove/list/search logic
+  - [ ] `booking_service.bal` — date validation, overlap check, price calc
+  - [ ] `users_service.bal` — registerUser validation
+  - [ ] Generated service template — wire remote functions to the above
+- [ ] **gRPC Client Implementation (10 marks)** — fill in the six TODO
+      calls in `client/client.bal`
+
+## Notes
+
+- `store.bal` uses Ballerina `map`s keyed by `propertyId` / `bookingRef`
+  as required by the spec ("use Ballerina maps or tables").
+- The booking logic is deliberately left blank — it's the most heavily
+  weighted part of the rubric ("comprehensive server-side logic
+  handling data persistence, validation, and price calculation").
+  Make sure whoever takes `booking_service.bal` understands the
+  overlap-check requirement, not just the price math.
+- Remember the assignment's own rule: AI tools are meant as a guide,
+  not a source of finished code — the TODOs above are yours to fill in.
