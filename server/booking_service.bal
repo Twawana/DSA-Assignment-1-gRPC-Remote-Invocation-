@@ -1,47 +1,79 @@
 // booking_service.bal
 // Business logic for: book_property, confirm_booking.
-//
-// Marks: contributes to "gRPC Server Implementation" (25 marks) —
-// this is the part the rubric weighs most heavily ("comprehensive
-// server-side logic handling data persistence, validation, and price
-// calculation"), so give the TODOs below real attention.
 
 import ballerina/time;
 
 public function bookProperty(string guestId, string propertyId,
         string checkIn, string checkOut) returns PendingBooking|error {
 
-    // TODO 1: verify propertyId exists in propertyStore (else error).
-    // TODO 2: validate checkOut is strictly after checkIn.
-    //         Parse "YYYY-MM-DD" with time:civilFromString / time:utcFromString,
-    //         or split the string and compare year/month/day as a simpler
-    //         approach if you haven't covered ballerina/time yet.
-    // TODO 3: create a PendingBooking with nextBookingRef(), store it in
-    //         pendingBookings, and return it.
+    PropertyRecord? prop = propertyStore[propertyId];
+    if prop is () {
+        return error("Property not found: " + propertyId);
+    }
 
-    return error("Not implemented: bookProperty");
+    if checkOut <= checkIn {
+        return error("checkOut must be after checkIn");
+    }
+
+    string ref = nextBookingRef();
+    PendingBooking booking = {
+        bookingRef: ref,
+        guestId: guestId,
+        propertyId: propertyId,
+        checkIn: checkIn,
+        checkOut: checkOut
+    };
+
+    pendingBookings[ref] = booking;
+    return booking;
 }
 
 public function confirmBooking(string bookingRef) returns ConfirmedBooking|error {
 
-    // TODO 1: look up pendingBookings[bookingRef]; error if missing.
-    // TODO 2: look up the property in propertyStore for its pricePerNight.
-    // TODO 3: check for date overlaps: loop over confirmedBookings for the
-    //         same propertyId and reject if [checkIn, checkOut) overlaps
-    //         any existing confirmed range for that property.
-    // TODO 4: calculate nights (checkOut - checkIn) and
-    //         totalCost = nights * pricePerNight.
-    // TODO 5: build a ConfirmedBooking, store it in confirmedBookings,
-    //         remove the entry from pendingBookings, and return it.
+    PendingBooking? pending = pendingBookings[bookingRef];
+    if pending is () {
+        return error("Booking not found: " + bookingRef);
+    }
 
-    return error("Not implemented: confirmBooking");
+    PropertyRecord? prop = propertyStore[pending.propertyId];
+    if prop is () {
+        return error("Property no longer exists: " + pending.propertyId);
+    }
+
+    foreach ConfirmedBooking existing in confirmedBookings {
+        if existing.propertyId == pending.propertyId {
+            boolean overlaps = pending.checkIn < existing.checkOut &&
+                    existing.checkIn < pending.checkOut;
+            if overlaps {
+                return error("Dates overlap with an existing confirmed booking: " + existing.bookingRef);
+            }
+        }
+    }
+
+    int nights = check daysBetween(pending.checkIn, pending.checkOut);
+    decimal totalCost = <decimal>nights * prop.pricePerNight;
+
+    ConfirmedBooking confirmed = {
+        bookingRef: pending.bookingRef,
+        guestId: pending.guestId,
+        propertyId: pending.propertyId,
+        checkIn: pending.checkIn,
+        checkOut: pending.checkOut,
+        totalCost: totalCost,
+        nights: nights
+    };
+
+    confirmedBookings[bookingRef] = confirmed;
+    _ = pendingBookings.remove(bookingRef);
+
+    return confirmed;
 }
 
-// Optional helper — you'll likely want something like this for both
-// TODO 2 above and the overlap check in TODO 3.
 function daysBetween(string isoDateA, string isoDateB) returns int|error {
-    // TODO: parse both "YYYY-MM-DD" strings and return the difference
-    // in days (isoDateB - isoDateA). ballerina/time's civil records and
-    // time:utcFromCivil / time:utcDiffSeconds are one way to do this.
-    return error("Not implemented: daysBetween");
+    time:Civil a = check time:civilFromString(isoDateA + "T00:00:00.00Z");
+    time:Civil b = check time:civilFromString(isoDateB + "T00:00:00.00Z");
+    time:Utc utcA = check time:utcFromCivil(a);
+    time:Utc utcB = check time:utcFromCivil(b);
+    decimal diffSeconds = time:utcDiffSeconds(utcB, utcA);
+    return <int>(diffSeconds / 86400);
 }
