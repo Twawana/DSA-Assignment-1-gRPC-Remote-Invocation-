@@ -1,89 +1,82 @@
-// client.bal
-// Demonstrates all 8 RPCs against the RentalService server.
-//
-// IMPORTANT: after you run `bal grpc` (see README.md), it generates a
-// client object for you — conventionally named "<ServiceName>Client",
-// i.e. RentalServiceClient — with one method per rpc, already
-// implemented to make the network call. You do NOT hand-write the
-// network logic below; you only call the generated client's methods.
-// Check the generated file for the exact method/record names in your
-// Ballerina version — they should match the pattern shown here, but
-// confirm before you copy-paste.
-
 import ballerina/io;
-// import rental_accommodation.server.rental_pb; // <- adjust to wherever
-                                                   //    your generated stub
-                                                   //    module ends up
 
 public function main() returns error? {
+    RentalServiceClient rentalClient = check new ("http://localhost:9090");
 
-    // rental_pb:RentalServiceClient rentalClient = check new ("http://localhost:9090");
+    PropertyResponse addResponse = check rentalClient->AddProperty({
+        host_id: "host-001",
+        name: "Seaside Cottage",
+        location: "Swakopmund",
+        property_type: "Cottage",
+        price_per_night: 850.0,
+        status: "AVAILABLE"
+    });
+    io:println("Added property: ", addResponse.message);
+    string propertyId = addResponse.property.property_id;
 
-    // =====================================================================
-    // WORKED EXAMPLE — add_property (simple RPC)
-    // Use this as the pattern for every other call below.
-    // =====================================================================
+    CreateUsersStreamingClient usersClient = check rentalClient->CreateUsers();
+    check usersClient->sendUserRequest({
+        user_id: "host-001",
+        name: "Host One",
+        role: "HOST",
+        email: "host@example.com"
+    });
+    check usersClient->sendUserRequest({
+        user_id: "guest-001",
+        name: "Guest One",
+        role: "GUEST",
+        email: "guest@example.com"
+    });
+    check usersClient->complete();
+    CreateUsersResponse? usersResponse = check usersClient->receiveCreateUsersResponse();
+    io:println("Users registered: ", usersResponse);
 
-    // rental_pb:PropertyRequest newProperty = {
-    //     hostId: "HOST-01",
-    //     name: "Seaside Cottage",
-    //     location: "Swakopmund",
-    //     propertyType: "Cottage",
-    //     pricePerNight: 850.00,
-    //     status: "AVAILABLE"
-    // };
-    // rental_pb:PropertyResponse addResp = check rentalClient->addProperty(newProperty);
-    // io:println("Added property: ", addResp);
+    PropertyResponse updateResponse = check rentalClient->UpdateProperty({
+        property_id: propertyId,
+        price_per_night: 900.0,
+        status: "AVAILABLE"
+    });
+    io:println("Property updated: ", updateResponse.message);
 
-    // =====================================================================
-    // TODO — create_users (client-side streaming)
-    // Pattern:
-    //   var userStream = check rentalClient->createUsers();
-    //   foreach var u in yourUserList {
-    //       check userStream->sendUserRequest(u);
-    //   }
-    //   rental_pb:CreateUsersResponse resp = check userStream->complete();
-    //   io:println(resp);
-    // =====================================================================
+    stream<PropertyResponse, error?> properties = check rentalClient->ListAvailableProperties({
+        location: "",
+        max_price: 0.0
+    });
+    boolean foundProperty = false;
+    check properties.forEach(function(PropertyResponse property) {
+        foundProperty = true;
+        io:println("Available property: ", property.property.name);
+    });
+    if !foundProperty {
+        io:println("No available properties found.");
+    }
 
-    // =====================================================================
-    // TODO — update_property (simple RPC)
-    // Same pattern as add_property: build an UpdatePropertyRequest,
-    // call rentalClient->updateProperty(req), print the PropertyResponse.
-    // =====================================================================
+    PropertyResponse searchResponse = check rentalClient->SearchProperty({
+        property_id: propertyId
+    });
+    if searchResponse.success {
+        io:println("Property found: ", searchResponse.property.name);
+    } else {
+        io:println("Property not available: ", searchResponse.message);
+    }
 
-    // =====================================================================
-    // TODO — remove_property (simple RPC)
-    // Build a RemovePropertyRequest, call rentalClient->removeProperty(req),
-    // print the returned PropertyListResponse (the host's remaining listings).
-    // =====================================================================
+    BookingResponse bookingResponse = check rentalClient->BookProperty({
+        guest_id: "guest-001",
+        property_id: propertyId,
+        check_in: "2026-09-20",
+        check_out: "2026-09-23"
+    });
+    io:println("Booking response: ", bookingResponse.message);
 
-    // =====================================================================
-    // TODO — list_available_properties (server-side streaming)
-    // Pattern:
-    //   stream<rental_pb:PropertyResponse, error?> results =
-    //       check rentalClient->listAvailableProperties({location: "", maxPrice: 0.0});
-    //   check results.forEach(function(rental_pb:PropertyResponse p) {
-    //       io:println(p);
-    //   });
-    // =====================================================================
+    BookingConfirmation confirmation = check rentalClient->ConfirmBooking({
+        booking_ref: bookingResponse.booking_ref
+    });
+    io:println("Booking confirmed: ", confirmation.success);
+    io:println("Total cost: ", confirmation.total_cost);
 
-    // =====================================================================
-    // TODO — search_property (simple RPC)
-    // Build a SearchPropertyRequest, call rentalClient->searchProperty(req).
-    // =====================================================================
-
-    // =====================================================================
-    // TODO — book_property (simple RPC)
-    // Build a BookingRequest (guestId, propertyId, checkIn, checkOut),
-    // call rentalClient->bookProperty(req), keep the returned bookingRef.
-    // =====================================================================
-
-    // =====================================================================
-    // TODO — confirm_booking (simple RPC)
-    // Build a ConfirmBookingRequest with the bookingRef from above,
-    // call rentalClient->confirmBooking(req), print the BookingConfirmation.
-    // =====================================================================
-
-    io:println("Fill in the calls above once the gRPC stubs are generated.");
+    PropertyListResponse removeResponse = check rentalClient->RemoveProperty({
+        property_id: propertyId,
+        host_id: "host-001"
+    });
+    io:println("Property removed: ", removeResponse.message);
 }
