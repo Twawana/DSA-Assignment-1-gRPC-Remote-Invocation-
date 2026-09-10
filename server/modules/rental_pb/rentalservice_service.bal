@@ -1,4 +1,5 @@
 import ballerina/grpc;
+import rental_accommodation/server;
 
 listener grpc:Listener ep = new (9090);
 
@@ -24,6 +25,32 @@ service "RentalService" on ep {
     }
 
     remote function CreateUsers(stream<UserRequest, grpc:Error?> clientStream) returns CreateUsersResponse|error {
+        int successCount = 0;
+
+        while true {
+            record {|UserRequest value;|}|grpc:Error? next = clientStream.next();
+
+            if next is () {
+                break;
+            }
+
+            if next is grpc:Error {
+                return next;
+            }
+
+            UserRequest userReq = next.value;
+            error? result = server:registerUser(userReq.user_id, userReq.name, userReq.role, userReq.email);
+
+            if result is () {
+                successCount += 1;
+            }
+        }
+
+        return {
+            success: true,
+            count: successCount,
+            message: "Registered " + successCount.toString() + " user(s)."
+        };
     }
 
     remote function ListAvailableProperties(ListPropertiesRequest value) returns stream<PropertyResponse, error?>|error {
