@@ -1,5 +1,5 @@
 import ballerina/grpc;
-import rental_accommodation/server as srv;
+import rental_accommodation/server.logic as srv;
 
 listener grpc:Listener ep = new (9090);
 

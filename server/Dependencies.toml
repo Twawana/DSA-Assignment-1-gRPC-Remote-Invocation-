@@ -280,6 +280,7 @@ dependencies = [
 ]
 modules = [
 	{org = "rental_accommodation", packageName = "server", moduleName = "server"},
+	{org = "rental_accommodation", packageName = "server", moduleName = "server.logic"},
 	{org = "rental_accommodation", packageName = "server", moduleName = "server.rental_pb"}
 ]
 

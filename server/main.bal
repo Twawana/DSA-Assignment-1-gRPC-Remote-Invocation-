@@ -1,1 +1,1 @@
-import rental_accommodation/server.rental_pb;
+import rental_accommodation/server.rental_pb as _;
