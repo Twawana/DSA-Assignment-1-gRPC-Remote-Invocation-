@@ -74,6 +74,7 @@ public function removeProperty(string propertyId, string hostId)
 
     return from PropertyRecord p in propertyStore
         where p.hostId == hostId
+        where p.status == "AVAILABLE"
         select p;
 }
 
