@@ -1,0 +1,1 @@
+import rental_accommodation/server.rental_pb;
