@@ -233,6 +233,9 @@ version = "2.8.1"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"}
 ]
+modules = [
+	{org = "ballerina", packageName = "time", moduleName = "time"}
+]
 
 [[package]]
 org = "ballerina"
@@ -272,10 +275,12 @@ version = "0.1.0"
 dependencies = [
 	{org = "ballerina", name = "grpc"},
 	{org = "ballerina", name = "protobuf"},
+	{org = "ballerina", name = "time"},
 	{org = "ballerinai", name = "observe"}
 ]
 modules = [
 	{org = "rental_accommodation", packageName = "server", moduleName = "server"},
+	{org = "rental_accommodation", packageName = "server", moduleName = "server.logic"},
 	{org = "rental_accommodation", packageName = "server", moduleName = "server.rental_pb"}
 ]
 

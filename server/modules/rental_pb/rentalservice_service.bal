@@ -1,113 +1,117 @@
 import ballerina/grpc;
-import rental_accommodation/server as app;
+import rental_accommodation/server.logic as srv;
 
 listener grpc:Listener ep = new (9090);
+
+function toProtoProperty(srv:PropertyRecord p) returns Property {
+    return {
+        property_id: p.propertyId,
+        host_id: p.hostId,
+        name: p.name,
+        location: p.location,
+        property_type: p.propertyType,
+        price_per_night: <float>p.pricePerNight,
+        status: p.status
+    };
+}
 
 @grpc:Descriptor {value: RENTAL_DESC}
 service "RentalService" on ep {
 
     remote function AddProperty(PropertyRequest value) returns PropertyResponse|error {
-        app:PropertyRecord|error result = app:addProperty(value.host_id, value.name,
-            value.location, value.property_type, <decimal>value.price_per_night,
-            value.status);
+        srv:PropertyRecord|error result = srv:addProperty(value.host_id, value.name, value.location,
+                value.property_type, <decimal>value.price_per_night, value.status);
         if result is error {
-            return {success: false, message: result.message()};
+            return { success: false, message: result.message(), property: {} };
         }
-        return {success: true, message: "Property added",
-            property: toProperty(result)};
+        return { success: true, message: "Property added", property: toProtoProperty(result) };
     }
 
     remote function UpdateProperty(UpdatePropertyRequest value) returns PropertyResponse|error {
-        decimal? price = value.price_per_night == 0.0 ? () :
-            <decimal>value.price_per_night;
-        string? status = value.status == "" ? () : value.status;
-        app:PropertyRecord|error result = app:updateProperty(value.property_id, price, status);
+        decimal? newPrice = value.price_per_night > 0.0 ? <decimal>value.price_per_night : ();
+        string? newStatus = value.status == "" ? () : value.status;
+        srv:PropertyRecord|error result = srv:updateProperty(value.property_id, newPrice, newStatus);
         if result is error {
-            return {success: false, message: result.message()};
+            return { success: false, message: result.message(), property: {} };
         }
-        return {success: true, message: "Property updated",
-            property: toProperty(result)};
+        return { success: true, message: "Property updated", property: toProtoProperty(result) };
     }
 
     remote function RemoveProperty(RemovePropertyRequest value) returns PropertyListResponse|error {
-        app:PropertyRecord[]|error result = app:removeProperty(value.property_id, value.host_id);
+        srv:PropertyRecord[]|error result = srv:removeProperty(value.property_id, value.host_id);
         if result is error {
-            return {success: false, message: result.message()};
+            return { success: false, message: result.message(), properties: [] };
         }
-        return {success: true, message: "Property removed",
-            properties: fromProperties(result)};
+        Property[] remaining = from srv:PropertyRecord p in result select toProtoProperty(p);
+        return { success: true, message: "Property removed", properties: remaining };
     }
 
     remote function SearchProperty(SearchPropertyRequest value) returns PropertyResponse|error {
-        app:PropertyRecord|error result = app:searchProperty(value.property_id);
+        srv:PropertyRecord|error result = srv:searchProperty(value.property_id);
         if result is error {
-            return {success: false, message: result.message()};
+            return { success: false, message: result.message(), property: {} };
         }
-        return {success: true, message: "Property found",
-            property: toProperty(result)};
+        return { success: true, message: "Property found", property: toProtoProperty(result) };
     }
 
     remote function BookProperty(BookingRequest value) returns BookingResponse|error {
-        app:PendingBooking|error result = app:bookProperty(value.guest_id, value.property_id,
-            value.check_in, value.check_out);
+        srv:PendingBooking|error result = srv:bookProperty(value.guest_id, value.property_id,
+                value.check_in, value.check_out);
         if result is error {
-            return {success: false, message: result.message()};
+            return { success: false, message: result.message(), booking_ref: "" };
         }
-        return {success: true, message: "Booking requested",
-            booking_ref: result.bookingRef};
+        return { success: true, message: "Booking request received", booking_ref: result.bookingRef };
     }
 
     remote function ConfirmBooking(ConfirmBookingRequest value) returns BookingConfirmation|error {
-        app:ConfirmedBooking|error result = app:confirmBooking(value.booking_ref);
+        srv:ConfirmedBooking|error result = srv:confirmBooking(value.booking_ref);
         if result is error {
-            return {success: false, message: result.message()};
+            return { success: false, message: result.message(), booking_ref: value.booking_ref,
+                      total_cost: 0.0, nights: 0 };
         }
-        return {success: true, message: "Booking confirmed",
-            booking_ref: result.bookingRef, total_cost: <float>result.totalCost,
-            nights: result.nights};
+        return {
+            success: true,
+            message: "Booking confirmed",
+            booking_ref: result.bookingRef,
+            total_cost: <float>result.totalCost,
+            nights: result.nights
+        };
     }
 
     remote function CreateUsers(stream<UserRequest, grpc:Error?> clientStream) returns CreateUsersResponse|error {
-        int count = 0;
-        while true {
-            record {|UserRequest value;|}|grpc:Error? next = clientStream.next();
-            if next is () {
-                break;
-            }
-            if next is grpc:Error {
-                return next;
-            }
-            error? result = app:registerUser(next.value.user_id, next.value.name,
-                next.value.role, next.value.email);
+        int successCount = 0;
+        int failCount = 0;
+
+        error? streamError = clientStream.forEach(function(UserRequest req) {
+            error? result = srv:registerUser(req.user_id, req.name, req.role, req.email);
             if result is error {
-                return {success: false, count: count, message: result.message()};
+                failCount += 1;
+            } else {
+                successCount += 1;
             }
-            count += 1;
+        });
+
+        if streamError is error {
+            return streamError;
         }
-        return {success: true, count: count, message: "Users created"};
+
+        return {
+            success: failCount == 0,
+            count: successCount,
+            message: failCount == 0
+                ? "All users registered successfully"
+                : successCount.toString() + " registered, " + failCount.toString() + " rejected"
+        };
     }
 
     remote function ListAvailableProperties(ListPropertiesRequest value) returns stream<PropertyResponse, error?>|error {
-        app:PropertyRecord[] properties = app:listAvailableProperties(
-            value.location == "" ? () : value.location,
-            value.max_price == 0.0 ? () : <decimal>value.max_price);
-        return stream from app:PropertyRecord property in properties
-            select {success: true, message: "Property found",
-                property: toProperty(property)};
-    }
-}
+        string? location = value.location == "" ? () : value.location;
+        decimal? maxPrice = value.max_price > 0.0 ? <decimal>value.max_price : ();
+        srv:PropertyRecord[] results = srv:listAvailableProperties(location, maxPrice);
 
-function toProperty(app:PropertyRecord value) returns Property {
-    return {property_id: value.propertyId, host_id: value.hostId,
-        name: value.name, location: value.location,
-        property_type: value.propertyType, price_per_night: <float>value.pricePerNight,
-        status: value.status};
-}
+        stream<PropertyResponse, error?> responseStream = stream from srv:PropertyRecord p in results
+            select { success: true, message: "", property: toProtoProperty(p) };
 
-function fromProperties(app:PropertyRecord[] values) returns Property[] {
-    Property[] properties = [];
-    foreach app:PropertyRecord value in values {
-        properties.push(toProperty(value));
+        return responseStream;
     }
-    return properties;
 }
