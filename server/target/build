@@ -1,0 +1,96 @@
+{
+  "last_build_time": 1789343466307,
+  "last_update_time": 1789343466307,
+  "last_bal_toml_update_time": 1789051793930,
+  "distribution_version": "2201.13.5",
+  "last_modified_time": {
+    "server": 1789232724568
+  },
+  "last_build_options": {
+    "testReport": false,
+    "codeCoverage": false,
+    "skipTests": true,
+    "compilationOptions": {
+      "experimental": false,
+      "observabilityIncluded": true,
+      "cloud": "",
+      "dumpGraph": false,
+      "dumpRawGraphs": false
+    }
+  },
+  "src_meta_info": [
+    {
+      "file": "C:\\DEV\\DSA-Assignment-1-gRPC-Remote-Invocation-\\server\\Ballerina.toml",
+      "hash": "6977d82c0130836caccf78a85ecfb88570bbf85f7198bc3012352d8ab8278af4",
+      "size": 126,
+      "lastModifiedTime": 1789051793930
+    },
+    {
+      "file": "C:\\DEV\\DSA-Assignment-1-gRPC-Remote-Invocation-\\server\\main.bal",
+      "hash": "918f5e530698a320c5d2f6897be991af162089fac93b629ba65f089a98101c38",
+      "size": 50,
+      "lastModifiedTime": 1789232724568
+    },
+    {
+      "file": "C:\\DEV\\DSA-Assignment-1-gRPC-Remote-Invocation-\\server\\modules\\rental_pb\\rentalservice_service.bal",
+      "hash": "a6cce38327144221b3c9860a6ba0d85728e9220956aa166e05867c57680aeedf",
+      "size": 5114,
+      "lastModifiedTime": 1789232799258
+    },
+    {
+      "file": "C:\\DEV\\DSA-Assignment-1-gRPC-Remote-Invocation-\\server\\modules\\rental_pb\\rental_pb.bal",
+      "hash": "54b4263c532ad3fb0cc4dec3ada456151117dedfbfb0d46f7480b17dcca93c76",
+      "size": 26804,
+      "lastModifiedTime": 1789051793932
+    },
+    {
+      "file": "C:\\DEV\\DSA-Assignment-1-gRPC-Remote-Invocation-\\server\\modules\\logic\\booking_service.bal",
+      "hash": "ee9e70e01b41bb5c4f8a37e41307bc9e117cbce3e4c3e773c61ff7cc7235b15f",
+      "size": 2570,
+      "lastModifiedTime": 1789232724568
+    },
+    {
+      "file": "C:\\DEV\\DSA-Assignment-1-gRPC-Remote-Invocation-\\server\\modules\\logic\\property_service.bal",
+      "hash": "1ca9b8c92b11ecb03bde486c888cd0e63cf66f8d6dfe66b6be4efed4fc691b77",
+      "size": 2945,
+      "lastModifiedTime": 1789232724569
+    },
+    {
+      "file": "C:\\DEV\\DSA-Assignment-1-gRPC-Remote-Invocation-\\server\\modules\\logic\\store.bal",
+      "hash": "6e19c23464006bedb84fbda9481c596084c1fd5bc98ac53c5d107538ab55145b",
+      "size": 1880,
+      "lastModifiedTime": 1789232724569
+    },
+    {
+      "file": "C:\\DEV\\DSA-Assignment-1-gRPC-Remote-Invocation-\\server\\modules\\logic\\users_service.bal",
+      "hash": "0c425fd9e5ee6dcf8bc88d64d5e504afee1183b975d1b8b6bcb41b64b0382495",
+      "size": 667,
+      "lastModifiedTime": 1789232724570
+    }
+  ],
+  "target_exec_meta_info": {
+    "file": "C:\\DEV\\DSA-Assignment-1-gRPC-Remote-Invocation-\\server\\target\\backup\\bin\\server.jar",
+    "hash": "81c79c2941e7b920b7ea2c07e70248152fce9d353256270321f1eee10fed5723",
+    "size": 44435600,
+    "lastModifiedTime": 1789343479955
+  },
+  "settings_meta_info": {
+    "file": "C:\\Users\\Stephen Indongo\\.ballerina\\Settings.toml",
+    "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "size": 0,
+    "lastModifiedTime": 1787066676520
+  },
+  "ballerina_toml_meta_info": {
+    "file": "C:\\DEV\\DSA-Assignment-1-gRPC-Remote-Invocation-\\server\\Ballerina.toml",
+    "hash": "6977d82c0130836caccf78a85ecfb88570bbf85f7198bc3012352d8ab8278af4",
+    "size": 126,
+    "lastModifiedTime": 1789051793930
+  },
+  "imports": [
+    "ballerina/protobuf",
+    "ballerina/grpc",
+    "rental_accommodation/server.logic",
+    "rental_accommodation/server.rental_pb",
+    "ballerina/time"
+  ]
+}
